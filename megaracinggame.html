@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mega Racing Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden;
+            color: white;
+        }
+
+        #gameContainer {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%);
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB 0%, #90EE90 100%);
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 100;
+            min-width: 250px;
+            border-left: 4px solid #ff6b00;
+        }
+
+        .hud-item {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hud-label {
+            color: #aaa;
+        }
+
+        .hud-value {
+            color: #fff;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .nitro-bar {
+            width: 200px;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+            border: 1px solid #555;
+        }
+
+        .nitro-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b00, #ffaa00);
+            width: 100%;
+            transition: width 0.1s;
+            box-shadow: 0 0 10px rgba(255, 107, 0, 0.8);
+        }
+
+        .speed-bar {
+            width: 200px;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+            border: 1px solid #555;
+        }
+
+        .speed-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #ffff00);
+            width: 0%;
+            transition: width 0.1s;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            z-index: 100;
+            border-left: 4px solid #00ff88;
+        }
+
+        .control-item {
+            margin: 5px 0;
+            color: #aaa;
+        }
+
+        #replayContainer {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 200;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #replayContainer.active {
+            display: flex;
+        }
+
+        #replayCanvas {
+            max-width: 90%;
+            max-height: 75%;
+            border: 4px solid #ff6b00;
+            border-radius: 10px;
+            box-shadow: 0 0 50px rgba(255, 107, 0, 0.8);
+        }
+
+        #replayInfo {
+            margin-top: 30px;
+            text-align: center;
+            color: #fff;
+        }
+
+        #replayInfo h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #ffaa00;
+            text-shadow: 0 0 20px rgba(255, 107, 0, 0.8);
+        }
+
+        .replay-stat {
+            margin: 12px 0;
+            font-size: 16px;
+            color: #00ff88;
+        }
+
+        #replayButtons {
+            margin-top: 25px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .replay-btn {
+            padding: 12px 40px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .replay-btn.primary {
+            background: linear-gradient(135deg, #ff6b00, #ffaa00);
+            color: white;
+            box-shadow: 0 0 20px rgba(255, 107, 0, 0.6);
+        }
+
+        .replay-btn.primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(255, 107, 0, 0.9);
+        }
+
+        .replay-btn.secondary {
+            background: #333;
+            color: #fff;
+            border: 2px solid #ff6b00;
+        }
+
+        .replay-btn.secondary:hover {
+            background: #ff6b00;
+            transform: scale(1.05);
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            text-align: center;
+        }
+
+        #startScreen.hidden {
+            display: none;
+        }
+
+        #startScreen h1 {
+            font-size: 72px;
+            margin-bottom: 20px;
+            color: #ffaa00;
+            text-shadow: 0 0 30px rgba(255, 170, 0, 0.8), 0 0 60px rgba(255, 107, 0, 0.6);
+            font-weight: bold;
+            letter-spacing: 3px;
+        }
+
+        #startScreen p {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+
+        #startScreen .features {
+            font-size: 16px;
+            margin: 40px 0;
+            color: #00ff88;
+            line-height: 1.8;
+        }
+
+        #startBtn {
+            padding: 18px 60px;
+            font-size: 22px;
+            background: linear-gradient(135deg, #ff6b00, #ffaa00);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 40px;
+            transition: all 0.3s;
+            box-shadow: 0 0 30px rgba(255, 107, 0, 0.8);
+            letter-spacing: 2px;
+        }
+
+        #startBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 60px rgba(255, 107, 0, 1);
+        }
+
+        .drift-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 20px;
+            color: #999;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            z-index: 100;
+        }
+
+        .drift-indicator.active {
+            color: #ffaa00;
+            border-color: #ffaa00;
+            text-shadow: 0 0 20px rgba(255, 170, 0, 0.9);
+            animation: driftFlash 0.2s infinite;
+        }
+
+        @keyframes driftFlash {
+            0%, 100% { color: #ffaa00; }
+            50% { color: #ff6b00; }
+        }
+
+        .boost-indicator {
+            position: absolute;
+            top: 85px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 18px;
+            color: #999;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+            border: 2px solid transparent;
+            z-index: 100;
+        }
+
+        .boost-indicator.active {
+            color: #ff6b00;
+            border-color: #ff6b00;
+            text-shadow: 0 0 20px rgba(255, 107, 0, 0.9);
+            animation: boostFlash 0.15s infinite;
+        }
+
+        @keyframes boostFlash {
+            0%, 100% { color: #ff6b00; }
+            50% { color: #ffaa00; }
+        }
+
+        .loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 400;
+        }
+
+        .loading-screen.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #333;
+            border-top-color: #ff6b00;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            color: #ffaa00;
+            text-shadow: 0 0 10px rgba(255, 170, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="startScreen">
+            <h1>🏁 MEGA RACING</h1>
+            <p>Experience the thrill of high-speed racing</p>
+            <div class="features">
+                <p>⚡ Nitro Boost • 🌀 Drifting • ⛰️ Dynamic Slopes</p>
+                <p>🎬 Cinematic Replay Recording • 🏆 Race Statistics</p>
+            </div>
+            <button id="startBtn">START RACE</button>
+        </div>
+
+        <div class="loading-screen hidden" id="loadingScreen">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Generating Cinematic Replay...</div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="hud">
+            <div class="hud-item">
+                <span class="hud-label">Speed:</span>
+                <span class="hud-value" id="speedValue">0 km/h</span>
+            </div>
+            <div class="speed-bar">
+                <div class="speed-bar-fill" id="speedBar"></div>
+            </div>
+
+            <div class="hud-item" style="margin-top: 15px;">
+                <span class="hud-label">Nitro:</span>
+                <span class="hud-value" id="nitroValue">100%</span>
+            </div>
+            <div class="nitro-bar">
+                <div class="nitro-bar-fill" id="nitroBar"></div>
+            </div>
+
+            <div class="hud-item" style="margin-top: 15px;">
+                <span class="hud-label">Drift Score:</span>
+                <span class="hud-value" id="driftValue">0</span>
+            </div>
+
+            <div class="hud-item">
+                <span class="hud-label">Time:</span>
+                <span class="hud-value" id="timeValue">0s</span>
+            </div>
+
+            <div class="hud-item">
+                <span class="hud-label">Distance:</span>
+                <span class="hud-value" id="distanceValue">0m</span>
+            </div>
+        </div>
+
+        <div class="drift-indicator" id="driftIndicator">🌀 DRIFTING</div>
+        <div class="boost-indicator" id="boostIndicator">⚡ NITRO BOOST</div>
+
+        <div id="controls">
+            <div class="control-item">🎮 <strong>Arrow Keys</strong> - Steer Left/Right</div>
+            <div class="control-item">⬆️ <strong>Up Arrow</strong> - Accelerate</div>
+            <div class="control-item">⬇️ <strong>Down Arrow</strong> - Brake</div>
+            <div class="control-item">🚀 <strong>Space</strong> - Nitro Boost</div>
+            <div class="control-item">🌀 <strong>A/D Keys</strong> - Drift Control</div>
+            <div class="control-item">🏁 <strong>F</strong> - Finish Race</div>
+        </div>
+
+        <div id="replayContainer">
+            <canvas id="replayCanvas"></canvas>
+            <div id="replayInfo">
+                <h2>🎬 CINEMATIC RACE REPLAY</h2>
+                <div class="replay-stat">⚡ Max Speed: <span id="replayMaxSpeed">0</span> km/h</div>
+                <div class="replay-stat">📏 Total Distance: <span id="replayDistance">0</span>m</div>
+                <div class="replay-stat">⏱️ Race Time: <span id="replayTime">0</span>s</div>
+                <div class="replay-stat">🌀 Max Drift Score: <span id="replayDriftScore">0</span></div>
+                <div id="replayButtons">
+                    <button class="replay-btn primary" id="replayBtn">▶️ Replay from Start</button>
+                    <button class="replay-btn secondary" id="newRaceBtn">🏁 New Race</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== GAME CONFIGURATION ====================
+        const CONFIG = {
+            canvas: null,
+            ctx: null,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            gameRunning: false,
+            gameEnded: false,
+            replayPlaying: false,
+        };
+
+        // ==================== PLAYER/CAR OBJECT ====================
+        const player = {
+            x: CONFIG.width / 2,
+            y: CONFIG.height - 100,
+            width: 30,
+            height: 50,
+            angle: -Math.PI / 2,
+            speed: 0,
+            maxSpeed: 15,
+            acceleration: 0.3,
+            friction: 0.95,
+            rotationSpeed: 0.05,
+            driftIntensity: 0,
+            maxDriftIntensity: 1,
+            isDrifting: false,
+            nitro: 100,
+            maxNitro: 100,
+            nitroUsageRate: 0.5,
+            nitroRechargeRate: 0.2,
+            nitroActive: false,
+            boostMultiplier: 1.5,
+            driftScore: 0,
+            totalDistance: 0,
+            startTime: 0,
+            maxSpeedReached: 0,
+            maxDriftCombo: 0,
+            currentDriftCombo: 0,
+            driftComboTimeout: 0,
+        };
+
+        // ==================== ROAD SYSTEM ====================
+        const road = {
+            segments: [],
+            generateRoad() {
+                this.segments = [];
+                let y = CONFIG.height + 200;
+                let x = CONFIG.width / 2;
+                
+                for (let i = 0; i < 200; i++) {
+                    const sineWave = Math.sin(i / 20) * 150;
+                    const noise = (Math.random() - 0.5) * 40;
+                    
+                    this.segments.push({
+                        x: x + sineWave + noise,
+                        y: y,
+                        width: 200,
+                        slope: (Math.random() - 0.5) * 0.2,
+                        elevation: Math.sin(i / 30) * 100 + Math.cos(i / 50) * 50,
+                        speedBoostZone: i % 40 === 0,
+                    });
+                    
+                    y -= 40;
+                }
+            },
+        };
+
+        // ==================== INPUT HANDLING ====================
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            
+            if (e.key === ' ') {
+                e.preventDefault();
+                handleNitro();
+            }
+            if (e.key.toLowerCase() === 'f') {
+                e.preventDefault();
+                if (CONFIG.gameRunning) {
+                    finishRace();
+                }
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // ==================== NITRO SYSTEM ====================
+        function handleNitro() {
+            if (!CONFIG.gameRunning) return;
+            if (player.nitro > 10 && !player.nitroActive) {
+                player.nitroActive = true;
+            }
+        }
+
+        function updateNitro() {
+            if (player.nitroActive && player.nitro > 0) {
+                player.nitro -= player.nitroUsageRate;
+                player.maxSpeed = 20;
+                if (player.nitro <= 0) {
+                    player.nitroActive = false;
+                    player.nitro = 0;
+                }
+            } else {
+                player.nitroActive = false;
+                player.maxSpeed = 15;
+                player.nitro = Math.min(player.nitro + player.nitroRechargeRate, player.maxNitro);
+            }
+            
+            document.getElementById('nitroValue').textContent = Math.max(0, Math.ceil(player.nitro)) + '%';
+            document.getElementById('nitroBar').style.width = (player.nitro / player.maxNitro) * 100 + '%';
+            
+            const boostIndicator = document.getElementById('boostIndicator');
+            if (player.nitroActive) {
+                boostIndicator.classList.add('active');
+            } else {
+                boostIndicator.classList.remove('active');
+            }
+        }
+
+        // ==================== DRIFT SYSTEM ====================
+        function updateDrift() {
+            const isDriftingNow = (keys['a'] || keys['d']) && Math.abs(player.speed) > 3;
+            
+            if (isDriftingNow) {
+                player.isDrifting = true;
+                player.driftIntensity = Math.min(player.driftIntensity + 0.05, player.maxDriftIntensity);
+                player.driftScore += player.driftIntensity * 2;
+                player.currentDriftCombo += player.driftIntensity * 2;
+                player.driftComboTimeout = 60;
+            } else {
+                player.isDrifting = false;
+                player.driftIntensity = Math.max(player.driftIntensity - 0.1, 0);
+            }
+            
+            if (player.driftComboTimeout > 0) {
+                player.driftComboTimeout--;
+            } else {
+                if (player.currentDriftCombo > player.maxDriftCombo) {
+                    player.maxDriftCombo = player.currentDriftCombo;
+                }
+                player.currentDriftCombo = 0;
+            }
+            
+            document.getElementById('driftValue').textContent = Math.floor(player.driftScore);
+            const driftIndicator = document.getElementById('driftIndicator');
+            if (player.isDrifting) {
+                driftIndicator.classList.add('active');
+            } else {
+                driftIndicator.classList.remove('active');
+            }
+        }
+
+        // ==================== PLAYER UPDATE ====================
+        function updatePlayer() {
+            if (keys['arrowup']) {
+                player.speed += player.acceleration;
+            }
+            if (keys['arrowdown']) {
+                player.speed -= player.acceleration * 1.5;
+            }
+            
+            player.speed *= player.friction;
+            
+            const effectiveMaxSpeed = player.nitroActive ? player.maxSpeed * player.boostMultiplier : player.maxSpeed;
+            player.speed = Math.max(-player.maxSpeed / 2, Math.min(player.speed, effectiveMaxSpeed));
+            
+            if (keys['arrowleft']) {
+                player.angle -= player.rotationSpeed;
+            }
+            if (keys['arrowright']) {
+                player.angle += player.rotationSpeed;
+            }
+            
+            if (player.isDrifting) {
+                player.angle += (keys['d'] ? 1 : -1) * player.driftIntensity * 0.08;
+            }
+            
+            player.x += Math.cos(player.angle) * player.speed;
+            player.y += Math.sin(player.angle) * player.speed;
+            
+            player.totalDistance += Math.abs(player.speed);
+            
+            const currentSpeed = Math.abs(player.speed);
+            if (currentSpeed > player.maxSpeedReached) {
+                player.maxSpeedReached = currentSpeed;
+            }
+            
+            if (player.x < -100) player.x = CONFIG.width + 100;
+            if (player.x > CONFIG.width + 100) player.x = -100;
+            if (player.y < -100) player.y = CONFIG.height + 100;
+            if (player.y > CONFIG.height + 100) player.y = -100;
+            
+            document.getElementById('speedValue').textContent = Math.abs(Math.ceil(player.speed * 10)) + ' km/h';
+            document.getElementById('speedBar').style.width = (Math.abs(player.speed) / effectiveMaxSpeed) * 100 + '%';
+            document.getElementById('distanceValue').textContent = Math.floor(player.totalDistance) + 'm';
+        }
+
+        // ==================== RENDERING ====================
+        function drawRoad() {
+            CONFIG.ctx.fillStyle = '#333333';
+            CONFIG.ctx.strokeStyle = '#ffff00';
+            CONFIG.ctx.lineWidth = 2;
+            
+            for (let i = 0; i < road.segments.length - 1; i++) {
+                const seg1 = road.segments[i];
+                const seg2 = road.segments[i + 1];
+                
+                CONFIG.ctx.fillStyle = i % 2 === 0 ? '#2a2a2a' : '#333333';
+                CONFIG.ctx.beginPath();
+                CONFIG.ctx.moveTo(seg1.x - seg1.width / 2, seg1.y);
+                CONFIG.ctx.lineTo(seg1.x + seg1.width / 2, seg1.y);
+                CONFIG.ctx.lineTo(seg2.x + seg2.width / 2, seg2.y);
+                CONFIG.ctx.lineTo(seg2.x - seg2.width / 2, seg2.y);
+                CONFIG.ctx.fill();
+                
+                if (i % 4 === 0) {
+                    CONFIG.ctx.strokeStyle = '#ffff00';
+                    CONFIG.ctx.lineWidth = 2;
+                    CONFIG.ctx.beginPath();
+                    CONFIG.ctx.moveTo(seg1.x, seg1.y);
+                    CONFIG.ctx.lineTo(seg2.x, seg2.y);
+                    CONFIG.ctx.stroke();
+                }
+                
+                CONFIG.ctx.strokeStyle = '#ff6b00';
+                CONFIG.ctx.lineWidth = 4;
+                CONFIG.ctx.beginPath();
+                CONFIG.ctx.moveTo(seg1.x - seg1.width / 2, seg1.y);
+                CONFIG.ctx.lineTo(seg2.x - seg2.width / 2, seg2.y);
+                CONFIG.ctx.stroke();
+                CONFIG.ctx.beginPath();
+                CONFIG.ctx.moveTo(seg1.x + seg1.width / 2, seg1.y);
+                CONFIG.ctx.lineTo(seg2.x + seg2.width / 2, seg2.y);
+                CONFIG.ctx.stroke();
+                
+                if (seg1.speedBoostZone) {
+                    CONFIG.ctx.fillStyle = 'rgba(0, 255, 136, 0.3)';
+                    CONFIG.ctx.fillRect(seg1.x - seg1.width / 2, seg1.y - 5, seg1.width, 50);
+                }
+            }
+        }
+
+        function drawPlayer() {
+            CONFIG.ctx.save();
+            CONFIG.ctx.translate(player.x, player.y);
+            CONFIG.ctx.rotate(player.angle + Math.PI / 2);
+            
+            CONFIG.ctx.fillStyle = player.nitroActive ? '#ff6b00' : '#ff3333';
+            CONFIG.ctx.fillRect(-player.width / 2, -player.height / 2, player.width, player.height);
+            
+            CONFIG.ctx.fillStyle = '#88ccff';
+            CONFIG.ctx.fillRect(-player.width / 3, -player.height / 4, player.width * 0.66, player.height / 3);
+            
+            if (player.isDrifting) {
+                CONFIG.ctx.fillStyle = `rgba(255, 107, 0, ${player.driftIntensity * 0.5})`;
+                CONFIG.ctx.fillRect(-player.width / 2 - 10, player.height / 2, player.width + 20, 20);
+            }
+            
+            if (player.nitroActive) {
+                CONFIG.ctx.fillStyle = `rgba(255, 107, 0, 0.7)`;
+                CONFIG.ctx.beginPath();
+                CONFIG.ctx.moveTo(-player.width / 3, player.height / 2);
+                CONFIG.ctx.lineTo(player.width / 3, player.height / 2);
+                CONFIG.ctx.lineTo(0, player.height / 2 + 20);
+                CONFIG.ctx.fill();
+                
+                CONFIG.ctx.fillStyle = `rgba(255, 200, 0, 0.5)`;
+                CONFIG.ctx.beginPath();
+                CONFIG.ctx.moveTo(-player.width / 4, player.height / 2 + 5);
+                CONFIG.ctx.lineTo(player.width / 4, player.height / 2 + 5);
+                CONFIG.ctx.lineTo(0, player.height / 2 + 15);
+                CONFIG.ctx.fill();
+            }
+            
+            CONFIG.ctx.restore();
+        }
+
+        function drawBackground() {
+            const gradient = CONFIG.ctx.createLinearGradient(0, 0, 0, CONFIG.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#E0F6FF');
+            CONFIG.ctx.fillStyle = gradient;
+            CONFIG.ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
+            
+            CONFIG.ctx.fillStyle = '#90EE90';
+            CONFIG.ctx.beginPath();
+            CONFIG.ctx.ellipse(CONFIG.width / 4, CONFIG.height / 3, 300, 150, 0, 0, Math.PI * 2);
+            CONFIG.ctx.fill();
+            
+            CONFIG.ctx.fillStyle = '#7CCD7C';
+            CONFIG.ctx.beginPath();
+            CONFIG.ctx.ellipse(CONFIG.width * 3 / 4, CONFIG.height / 3 + 50, 350, 120, 0, 0, Math.PI * 2);
+            CONFIG.ctx.fill();
+        }
+
+        // ==================== RACE RECORDING ====================
+        class RaceRecorder {
+            constructor() {
+                this.frames = [];
+            }
+
+            recordFrame() {
+                const imageData = CONFIG.ctx.getImageData(0, 0, CONFIG.width, CONFIG.height);
+                this.frames.push({
+                    imageData: imageData,
+                    playerState: {
+                        x: player.x,
+                        y: player.y,
+                        angle: player.angle,
+                        speed: player.speed,
+                        driftIntensity: player.driftIntensity,
+                        isDrifting: player.isDrifting,
+                        nitroActive: player.nitroActive,
+                    },
+                    stats: {
+                        driftScore: player.driftScore,
+                        distance: player.totalDistance,
+                    }
+                });
+            }
+
+            getStats() {
+                return {
+                    maxSpeed: player.maxSpeedReached,
+                    totalDistance: player.totalDistance,
+                    raceTime: Math.floor((Date.now() - player.startTime) / 1000),
+                    maxDriftScore: player.maxDriftCombo,
+                };
+            }
+        }
+
+        const recorder = new RaceRecorder();
+
+        // ==================== CINEMATIC REPLAY ====================
+        function generateCinematicReplay() {
+            document.getElementById('loadingScreen').classList.remove('hidden');
+            
+            setTimeout(() => {
+                playReplaySequence();
+            }, 1000);
+        }
+
+        function playReplaySequence() {
+            const replayCanvas = document.getElementById('replayCanvas');
+            const replayCtx = replayCanvas.getContext('2d');
+            
+            replayCanvas.width = CONFIG.width;
+            replayCanvas.height = CONFIG.height;
+            
+            let frameIndex = 0;
+            const totalFrames = recorder.frames.length;
+            
+            function renderFrame() {
+                if (frameIndex < totalFrames) {
+                    const frame = recorder.frames[frameIndex];
+                    
+                    replayCtx.putImageData(frame.imageData, 0, 0);
+                    
+                    // Cinematic overlay
+                    replayCtx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+                    replayCtx.fillRect(0, 0, replayCanvas.width, replayCanvas.height);
+                    
+                    // Frame info
+                    replayCtx.fillStyle = '#ffaa00';
+                    replayCtx.font = 'bold 20px Arial';
+                    replayCtx.fillText(`Frame: ${frameIndex + 1}/${totalFrames}`, 20, 40);
+                    
+                    frameIndex++;
+                    requestAnimationFrame(renderFrame);
+                } else {
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                    document.getElementById('replayContainer').classList.add('active');
+                    updateReplayStats();
+                }
+            }
+            
+            renderFrame();
+        }
+
+        function updateReplayStats() {
+            const stats = recorder.getStats();
+            document.getElementById('replayMaxSpeed').textContent = Math.ceil(stats.maxSpeed * 10);
+            document.getElementById('replayDistance').textContent = Math.floor(stats.totalDistance);
+            document.getElementById('replayTime').textContent = stats.raceTime;
+            document.getElementById('replayDriftScore').textContent = Math.floor(stats.maxDriftScore);
+        }
+
+        // ==================== GAME LOOP ====================
+        function gameLoop() {
+            if (!CONFIG.gameRunning) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+            
+            drawBackground();
+            drawRoad();
+            
+            updatePlayer();
+            updateDrift();
+            updateNitro();
+            
+            const elapsed = Math.floor((Date.now() - player.startTime) / 1000);
+            document.getElementById('timeValue').textContent = elapsed + 's';
+            
+            drawPlayer();
+            
+            recorder.recordFrame();
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ==================== START GAME ====================
+        function startGame() {
+            document.getElementById('startScreen').classList.add('hidden');
+            CONFIG.gameRunning = true;
+            CONFIG.gameEnded = false;
+            
+            player.x = CONFIG.width / 2;
+            player.y = CONFIG.height - 100;
+            player.speed = 0;
+            player.angle = -Math.PI / 2;
+            player.driftScore = 0;
+            player.totalDistance = 0;
+            player.nitro = 100;
+            player.maxSpeedReached = 0;
+            player.maxDriftCombo = 0;
+            player.currentDriftCombo = 0;
+            player.startTime = Date.now();
+            
+            recorder.frames = [];
+            road.generateRoad();
+            
+            gameLoop();
+        }
+
+        // ==================== FINISH RACE ====================
+        function finishRace() {
+            CONFIG.gameRunning = false;
+            CONFIG.gameEnded = true;
+            generateCinematicReplay();
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        
+        document.getElementById('replayBtn').addEventListener('click', () => {
+            if (recorder.frames.length > 0 && !CONFIG.replayPlaying) {
+                CONFIG.replayPlaying = true;
+                const replayCanvas = document.getElementById('replayCanvas');
+                const replayCtx = replayCanvas.getContext('2d');
+                
+                let frameIndex = 0;
+                const totalFrames = recorder.frames.length;
+                
+                function replayFrame() {
+                    if (frameIndex < totalFrames) {
+                        const frame = recorder.frames[frameIndex];
+                        replayCtx.putImageData(frame.imageData, 0, 0);
+                        
+                        replayCtx.fillStyle = '#ffaa00';
+                        replayCtx.font = 'bold 20px Arial';
+                        replayCtx.fillText(`Frame: ${frameIndex + 1}/${totalFrames}`, 20, 40);
+                        
+                        frameIndex++;
+                        requestAnimationFrame(replayFrame);
+                    } else {
+                        CONFIG.replayPlaying = false;
+                    }
+                }
+                
+                replayFrame();
+            }
+        });
+        
+        document.getElementById('newRaceBtn').addEventListener('click', () => {
+            CONFIG.replayPlaying = false;
+            document.getElementById('replayContainer').classList.remove('active');
+            document.getElementById('startScreen').classList.remove('hidden');
+        });
+
+        // ==================== INITIALIZATION ====================
+        function init() {
+            CONFIG.canvas = document.getElementById('gameCanvas');
+            CONFIG.ctx = CONFIG.canvas.getContext('2d');
+            CONFIG.canvas.width = CONFIG.width;
+            CONFIG.canvas.height = CONFIG.height;
+            
+            road.generateRoad();
+            
+            window.addEventListener('resize', () => {
+                CONFIG.width = window.innerWidth;
+                CONFIG.height = window.innerHeight;
+                CONFIG.canvas.width = CONFIG.width;
+                CONFIG.canvas.height = CONFIG.height;
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
