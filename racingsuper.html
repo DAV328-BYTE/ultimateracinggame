@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Racing Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden;
+            color: white;
+        }
+
+        #gameContainer {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%);
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB 0%, #90EE90 100%);
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 100;
+            min-width: 250px;
+        }
+
+        .hud-item {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hud-label {
+            color: #aaa;
+        }
+
+        .hud-value {
+            color: #fff;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .nitro-bar {
+            width: 200px;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .nitro-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b00, #ffaa00);
+            width: 100%;
+            transition: width 0.1s;
+        }
+
+        .speed-bar {
+            width: 200px;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .speed-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #ffff00);
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            z-index: 100;
+        }
+
+        .control-item {
+            margin: 5px 0;
+            color: #aaa;
+        }
+
+        #replayContainer {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 200;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #replayContainer.active {
+            display: flex;
+        }
+
+        #replayCanvas {
+            max-width: 90%;
+            max-height: 80%;
+            border: 3px solid #ff6b00;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255, 107, 0, 0.8);
+        }
+
+        #replayInfo {
+            margin-top: 30px;
+            text-align: center;
+            color: #fff;
+        }
+
+        #replayInfo h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #ffaa00;
+        }
+
+        .replay-stat {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        #replayButtons {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .replay-btn {
+            padding: 10px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .replay-btn.primary {
+            background: #ff6b00;
+            color: white;
+        }
+
+        .replay-btn.primary:hover {
+            background: #ffaa00;
+            box-shadow: 0 0 20px rgba(255, 107, 0, 0.8);
+        }
+
+        .replay-btn.secondary {
+            background: #333;
+            color: #fff;
+            border: 2px solid #ff6b00;
+        }
+
+        .replay-btn.secondary:hover {
+            background: #ff6b00;
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            text-align: center;
+        }
+
+        #startScreen.hidden {
+            display: none;
+        }
+
+        #startScreen h1 {
+            font-size: 60px;
+            margin-bottom: 20px;
+            color: #ffaa00;
+            text-shadow: 0 0 20px rgba(255, 170, 0, 0.8);
+        }
+
+        #startScreen p {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+
+        #startScreen .features {
+            font-size: 14px;
+            margin: 30px 0;
+            color: #00ff88;
+        }
+
+        #startBtn {
+            padding: 15px 50px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #ff6b00, #ffaa00);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 30px;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(255, 107, 0, 0.8);
+        }
+
+        #startBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 40px rgba(255, 107, 0, 1);
+        }
+
+        .drift-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 18px;
+            color: #ffaa00;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 170, 0, 0.8);
+        }
+
+        .drift-indicator.active {
+            animation: driftFlash 0.3s infinite;
+        }
+
+        @keyframes driftFlash {
+            0%, 100% { color: #ffaa00; text-shadow: 0 0 10px rgba(255, 170, 0, 0.8); }
+            50% { color: #ff6b00; text-shadow: 0 0 20px rgba(255, 107, 0, 1); }
+        }
+
+        .nitro-effect {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="startScreen">
+            <h1>🏁 ULTIMATE RACING</h1>
+            <p>Experience the thrill of high-speed racing</p>
+            <div class="features">
+                <p>⚡ Nitro Boost • 🌀 Drifting • ⛰️ Dynamic Slopes</p>
+                <p>🎬 Cinematic Replay Recording • 🏆 Race Statistics</p>
+            </div>
+            <button id="startBtn">START RACE</button>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="hud">
+            <div class="hud-item">
+                <span class="hud-label">Speed:</span>
+                <span class="hud-value" id="speedValue">0 km/h</span>
+            </div>
+            <div class="speed-bar">
+                <div class="speed-bar-fill" id="speedBar"></div>
+            </div>
+
+            <div class="hud-item" style="margin-top: 15px;">
+                <span class="hud-label">Nitro:</span>
+                <span class="hud-value" id="nitroValue">100%</span>
+            </div>
+            <div class="nitro-bar">
+                <div class="nitro-bar-fill" id="nitroBar"></div>
+            </div>
+
+            <div class="hud-item" style="margin-top: 15px;">
+                <span class="hud-label">Drift Score:</span>
+                <span class="hud-value" id="driftValue">0</span>
+            </div>
+
+            <div class="hud-item">
+                <span class="hud-label">Time:</span>
+                <span class="hud-value" id="timeValue">0s</span>
+            </div>
+
+            <div class="hud-item">
+                <span class="hud-label">Distance:</span>
+                <span class="hud-value" id="distanceValue">0m</span>
+            </div>
+        </div>
+
+        <div class="drift-indicator" id="driftIndicator">DRIFTING</div>
+
+        <div id="controls">
+            <div class="control-item">🎮 Arrow Keys - Steer</div>
+            <div class="control-item">⬆️ Up Arrow - Accelerate</div>
+            <div class="control-item">⬇️ Down Arrow - Brake</div>
+            <div class="control-item">Space - Nitro Boost</div>
+            <div class="control-item">A/D - Drift Control</div>
+        </div>
+
+        <div id="replayContainer">
+            <canvas id="replayCanvas"></canvas>
+            <div id="replayInfo">
+                <h2>🎬 Race Replay</h2>
+                <div class="replay-stat">Max Speed: <span id="replayMaxSpeed">0</span> km/h</div>
+                <div class="replay-stat">Total Distance: <span id="replayDistance">0</span>m</div>
+                <div class="replay-stat">Race Time: <span id="replayTime">0</span>s</div>
+                <div class="replay-stat">Max Drift Score: <span id="replayDriftScore">0</span></div>
+                <div id="replayButtons">
+                    <button class="replay-btn primary" id="replayBtn">Replay from Start</button>
+                    <button class="replay-btn secondary" id="newRaceBtn">New Race</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
