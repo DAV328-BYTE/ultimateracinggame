@@ -350,6 +350,19 @@
             color: #ffaa00;
             text-shadow: 0 0 10px rgba(255, 170, 0, 0.8);
         }
+
+        .camera-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #ffaa00;
+            border-left: 3px solid #ff6b00;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -359,7 +372,7 @@
             <p>Experience the thrill of high-speed racing</p>
             <div class="features">
                 <p>⚡ Nitro Boost • 🌀 Drifting • ⛰️ Dynamic Slopes</p>
-                <p>🎬 Cinematic Replay Recording • 🏆 Race Statistics</p>
+                <p>🎬 Cinematic Camera Replay • 🏆 Race Statistics</p>
             </div>
             <button id="startBtn">START RACE</button>
         </div>
@@ -418,6 +431,7 @@
 
         <div id="replayContainer">
             <canvas id="replayCanvas"></canvas>
+            <div class="camera-info" id="cameraInfo">📹 CAMERA: BEHIND</div>
             <div id="replayInfo">
                 <h2>🎬 CINEMATIC RACE REPLAY</h2>
                 <div class="replay-stat">⚡ Max Speed: <span id="replayMaxSpeed">0</span> km/h</div>
@@ -442,6 +456,130 @@
             gameRunning: false,
             gameEnded: false,
             replayPlaying: false,
+        };
+
+        // ==================== CINEMATIC CAMERA SYSTEM ====================
+        const CinematicCamera = {
+            angles: ['BEHIND', 'SIDE', 'DRIFT', 'AERIAL', 'FRONT', 'COCKPIT'],
+            currentAngle: 0,
+            transitionProgress: 0,
+            transitionDuration: 2, // seconds
+            
+            getNextAngle() {
+                this.currentAngle = (this.currentAngle + 1) % this.angles.length;
+                this.transitionProgress = 0;
+                return this.angles[this.currentAngle];
+            },
+            
+            getCurrentAngleName() {
+                return this.angles[this.currentAngle];
+            },
+            
+            drawBehind(ctx, frame, width, height) {
+                // Follow from behind
+                ctx.putImageData(frame.imageData, 0, 0);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(0, 0, width, height);
+            },
+            
+            drawSide(ctx, frame, width, height) {
+                // Side angle with tilt effect
+                ctx.save();
+                ctx.translate(width / 2, height / 2);
+                ctx.rotate(0.05);
+                ctx.translate(-width / 2, -height / 2);
+                ctx.putImageData(frame.imageData, 0, 0);
+                ctx.restore();
+                ctx.fillStyle = 'rgba(255, 107, 0, 0.05)';
+                ctx.fillRect(0, 0, width, height);
+            },
+            
+            drawDrift(ctx, frame, width, height, driftIntensity) {
+                // Dynamic drift angle effect
+                const tiltAmount = driftIntensity * 0.1;
+                ctx.save();
+                ctx.translate(width / 2, height / 2);
+                ctx.rotate(tiltAmount);
+                ctx.translate(-width / 2, -height / 2);
+                ctx.putImageData(frame.imageData, 0, 0);
+                ctx.restore();
+                
+                // Motion blur effect
+                ctx.fillStyle = `rgba(255, 107, 0, ${driftIntensity * 0.15})`;
+                ctx.fillRect(0, 0, width, height);
+            },
+            
+            drawAerial(ctx, frame, width, height) {
+                // Zoomed out aerial view
+                ctx.save();
+                const scale = 0.8;
+                ctx.translate(width * (1 - scale) / 2, height * (1 - scale) / 2);
+                ctx.scale(scale, scale);
+                ctx.putImageData(frame.imageData, 0, 0);
+                ctx.restore();
+                
+                // Add vignette effect
+                const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.sqrt(width * width + height * height));
+                gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+            },
+            
+            drawFront(ctx, frame, width, height) {
+                // Front-facing camera with lens distortion effect
+                ctx.putImageData(frame.imageData, 0, 0);
+                
+                // Chromatic aberration effect
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.02)';
+                ctx.fillRect(0, 0, width, 10);
+                ctx.fillStyle = 'rgba(0, 0, 255, 0.02)';
+                ctx.fillRect(0, height - 10, width, 10);
+            },
+            
+            drawCockpit(ctx, frame, width, height) {
+                // First-person cockpit view
+                ctx.putImageData(frame.imageData, 0, 0);
+                
+                // Draw steering wheel top
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 15;
+                ctx.beginPath();
+                ctx.arc(width / 2, height - 40, 60, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(width / 2 - 80, height - 60, 160, 40);
+                
+                // Dashboard glow
+                ctx.fillStyle = 'rgba(255, 107, 0, 0.08)';
+                ctx.fillRect(0, height - 100, width, 100);
+            },
+            
+            renderFrame(ctx, frame, width, height) {
+                const angle = this.getCurrentAngleName();
+                
+                switch(angle) {
+                    case 'BEHIND':
+                        this.drawBehind(ctx, frame, width, height);
+                        break;
+                    case 'SIDE':
+                        this.drawSide(ctx, frame, width, height);
+                        break;
+                    case 'DRIFT':
+                        this.drawDrift(ctx, frame, width, height, frame.playerState?.driftIntensity || 0);
+                        break;
+                    case 'AERIAL':
+                        this.drawAerial(ctx, frame, width, height);
+                        break;
+                    case 'FRONT':
+                        this.drawFront(ctx, frame, width, height);
+                        break;
+                    case 'COCKPIT':
+                        this.drawCockpit(ctx, frame, width, height);
+                        break;
+                }
+            }
         };
 
         // ==================== PLAYER/CAR OBJECT ====================
@@ -785,21 +923,28 @@
             
             let frameIndex = 0;
             const totalFrames = recorder.frames.length;
+            const frameDuration = 1000 / 30; // 30 FPS
+            let cameraChangeInterval = Math.ceil(totalFrames / 5); // Change camera every 20% of frames
             
             function renderFrame() {
                 if (frameIndex < totalFrames) {
                     const frame = recorder.frames[frameIndex];
                     
-                    replayCtx.putImageData(frame.imageData, 0, 0);
+                    // Change camera angle periodically
+                    if (frameIndex % cameraChangeInterval === 0 && frameIndex > 0) {
+                        CinematicCamera.getNextAngle();
+                    }
                     
-                    // Cinematic overlay
-                    replayCtx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-                    replayCtx.fillRect(0, 0, replayCanvas.width, replayCanvas.height);
+                    // Render with cinematic camera
+                    CinematicCamera.renderFrame(replayCtx, frame, CONFIG.width, CONFIG.height);
                     
-                    // Frame info
+                    // Update camera info display
+                    document.getElementById('cameraInfo').textContent = `📹 CAMERA: ${CinematicCamera.getCurrentAngleName()}`;
+                    
+                    // Frame counter
                     replayCtx.fillStyle = '#ffaa00';
                     replayCtx.font = 'bold 20px Arial';
-                    replayCtx.fillText(`Frame: ${frameIndex + 1}/${totalFrames}`, 20, 40);
+                    replayCtx.fillText(`${frameIndex + 1}/${totalFrames}`, 20, 40);
                     
                     frameIndex++;
                     requestAnimationFrame(renderFrame);
@@ -864,6 +1009,7 @@
             player.startTime = Date.now();
             
             recorder.frames = [];
+            CinematicCamera.currentAngle = 0;
             road.generateRoad();
             
             gameLoop();
@@ -887,15 +1033,24 @@
                 
                 let frameIndex = 0;
                 const totalFrames = recorder.frames.length;
+                let cameraChangeInterval = Math.ceil(totalFrames / 5);
+                CinematicCamera.currentAngle = 0;
                 
                 function replayFrame() {
                     if (frameIndex < totalFrames) {
                         const frame = recorder.frames[frameIndex];
-                        replayCtx.putImageData(frame.imageData, 0, 0);
+                        
+                        if (frameIndex % cameraChangeInterval === 0 && frameIndex > 0) {
+                            CinematicCamera.getNextAngle();
+                        }
+                        
+                        CinematicCamera.renderFrame(replayCtx, frame, CONFIG.width, CONFIG.height);
+                        
+                        document.getElementById('cameraInfo').textContent = `📹 CAMERA: ${CinematicCamera.getCurrentAngleName()}`;
                         
                         replayCtx.fillStyle = '#ffaa00';
                         replayCtx.font = 'bold 20px Arial';
-                        replayCtx.fillText(`Frame: ${frameIndex + 1}/${totalFrames}`, 20, 40);
+                        replayCtx.fillText(`${frameIndex + 1}/${totalFrames}`, 20, 40);
                         
                         frameIndex++;
                         requestAnimationFrame(replayFrame);
